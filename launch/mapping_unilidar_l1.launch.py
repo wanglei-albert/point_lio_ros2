@@ -32,6 +32,15 @@ def generate_launch_description():
         }
     ]
 
+    octomap_mapping_params = [{'resolution': 0.05,
+                               'frame_id': 'camera_init',
+                            #    'base_frame_id': 'utilidar_lidar'
+                               'sensor_model.max_range': 15.0,
+                               'latch': True,
+                               'point_cloud_max_z': 0.50,
+                               'point_cloud_min_z': -0.1,
+                               }]
+
     # Node definition for laserMapping with Point-LIO
     laser_mapping_node = Node(
         package='point_lio',
@@ -52,13 +61,22 @@ def generate_launch_description():
             'rviz_cfg', 'loam_livox.rviz'
         ])],
         condition=IfCondition(LaunchConfiguration('rviz')),
-        prefix='nice'
+        # prefix='nice'
+    )
+
+    octomap_node = Node(
+        package='octomap_server',
+        executable='octomap_server_node',
+        name='octomap_server',
+        parameters=octomap_mapping_params,
+        remappings=[("cloud_in", "/cloud_registered")],
     )
 
     # Assemble the launch description
     ld = LaunchDescription([
         rviz_arg,
         laser_mapping_node,
+        octomap_node,
         GroupAction(
             actions=[rviz_node],
             condition=IfCondition(LaunchConfiguration('rviz'))
