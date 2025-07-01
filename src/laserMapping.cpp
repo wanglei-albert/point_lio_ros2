@@ -76,6 +76,9 @@ nav_msgs::msg::Path path;
 nav_msgs::msg::Odometry odomAftMapped;
 geometry_msgs::msg::PoseStamped msg_body_pose;
 
+rclcpp::TimerBase::SharedPtr pub_accumulated_cloud_timer_;
+rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pub_accumulate_cloud;
+
 auto logger = rclcpp::get_logger("laserMapping");
 
 void SigHandle(int sig) {
@@ -516,6 +519,7 @@ void publish_init_kdtree(const rclcpp::Publisher<sensor_msgs::msg::PointCloud2>:
 
 PointCloudXYZI::Ptr pcl_wait_pub(new PointCloudXYZI(500000, 1));
 PointCloudXYZI::Ptr pcl_wait_save(new PointCloudXYZI());
+PointCloudXYZI::Ptr pcl_accumulated_wait_pub(new PointCloudXYZI());
 
 void publish_frame_world(const rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr &pubLaserCloudFullRes) {
 
@@ -536,6 +540,10 @@ void publish_frame_world(const rclcpp::Publisher<sensor_msgs::msg::PointCloud2>:
             laserCloudWorld->points[i].intensity = feats_down_world->points[i].intensity; // feats_down_world->points[i].y; // 
             // }
         }
+        // to pub pointcloud with more details feature
+        *pcl_accumulated_wait_pub += *laserCloudWorld;
+
+
         sensor_msgs::msg::PointCloud2 laserCloudmsg;
         pcl::toROSMsg(*laserCloudWorld, laserCloudmsg);
 
@@ -689,7 +697,7 @@ void publish_odometry(const rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPt
 
     transform.header.stamp = odomAftMapped.header.stamp;
 
-    tf_br->sendTransform(transform);
+    // tf_br->sendTransform(transform);
 }
 
 void publish_path(const rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr &pubPath) {
@@ -709,6 +717,27 @@ void publish_path(const rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr &pubPa
     }
 }
 
+void publish_accumulate_cloud()
+{
+    // clear accumulated point cloud if every 5 seconds or distance bigger than 2 meters, but only publish 
+    // accumulated point cloud when robot move more than 2 meters
+    float cur_odom_dist = pow(odomAftMapped.pose.pose.position.x, 2) + pow(odomAftMapped.pose.pose.position.y, 2);
+    // if (cur_odom_dist < 4.0)
+    // {
+    //     pcl_accumulated_wait_pub->clear();
+    //     return;
+    // }
+
+    printf("square of odom distance: %f, relocating is triggered!\n", cur_odom_dist);
+    sensor_msgs::msg::PointCloud2 accRegisterCloudmsg;
+    pcl::toROSMsg(*pcl_accumulated_wait_pub, accRegisterCloudmsg);
+    accRegisterCloudmsg.header.stamp = get_ros_time(lidar_end_time);
+    accRegisterCloudmsg.header.frame_id = odom_header_frame_id;
+    pub_accumulate_cloud->publish(accRegisterCloudmsg);
+    pcl_accumulated_wait_pub->clear();
+}
+
+
 int main(int argc, char **argv) {
     rclcpp::init(argc, argv);
     auto nh = std::make_shared<rclcpp::Node>("laserMapping");
@@ -726,6 +755,7 @@ int main(int argc, char **argv) {
     /*** initialize variables ***/
     double FOV_DEG = (fov_deg + 10.0) > 179.9 ? 179.9 : (fov_deg + 10.0);
     double HALF_FOV_COS = cos((FOV_DEG) * 0.5 * PI_M / 180.0);
+
 
     memset(point_selected_surf, true, sizeof(point_selected_surf));
     downSizeFilterSurf.setLeafSize(filter_size_surf_min, filter_size_surf_min, filter_size_surf_min);
@@ -808,8 +838,12 @@ int main(int argc, char **argv) {
                 ("/odom_corrected", 100000);
     } else {
         pubOdomAftMapped = nh->create_publisher<nav_msgs::msg::Odometry>
-                ("/aft_mapped_to_init", 100000);
+                ("/odom_lio", 100000);
     }
+
+    pub_accumulate_cloud = nh->create_publisher<sensor_msgs::msg::PointCloud2>("/acc_reg_cloud", 10);
+    pub_accumulated_cloud_timer_ = nh->create_wall_timer(std::chrono::milliseconds(2000),  // 2 Hz
+                publish_accumulate_cloud);
 
     //auto plane_pub = nh->create_publisher<visualization_msgs::msg::Marker>
     //        ("/planner_normal", 1000);

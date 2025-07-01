@@ -25,8 +25,8 @@ def generate_launch_description():
             'cube_side_length': 1000.0,  # Option: 1000
             'runtime_pos_log_enable': False,  # Option: True
             'odom_only': True, # Option: False
-            'odom_header_frame_id': "odom",     # Default: "camera_init"
-            'odom_child_frame_id': "base_link", # Default: "aft_mapped"
+            'odom_header_frame_id': "camera_init",     # Default: "camera_init"
+            'odom_child_frame_id': "base_footprint", # Default: "aft_mapped"
         }
     ]
 

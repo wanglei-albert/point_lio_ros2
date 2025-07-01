@@ -36,7 +36,7 @@ void readParameters(shared_ptr<rclcpp::Node> &nh) {
     p_pre.reset(new Preprocess());
 
     nh->declare_parameter<bool>("odom_only", false);
-    nh->declare_parameter<std::string>("odom_header_frame_id", "camera_init");
+    nh->declare_parameter<std::string>("odom_header_frame_id", "lio_odom");
     nh->declare_parameter<std::string>("odom_child_frame_id", "aft_mapped");
 
     nh->declare_parameter<bool>("prop_at_freq_of_imu", true);

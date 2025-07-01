@@ -9,7 +9,7 @@ from launch_ros.substitutions import FindPackageShare
 def generate_launch_description():
     # Declare the RViz argument
     rviz_arg = DeclareLaunchArgument(
-        'rviz', default_value='true',
+        'rviz', default_value='false',
         description='Flag to launch RViz.')
 
     # Node parameters, including those from the YAML configuration file
@@ -34,14 +34,6 @@ def generate_launch_description():
         }
     ]
 
-    octomap_mapping_params = [{'resolution': 0.05,
-                               'frame_id': 'camera_init',
-                            #    'base_frame_id': 'utilidar_lidar'
-                               'sensor_model.max_range': 15.0,
-                               'latch': True,
-                               'point_cloud_max_z': 0.50,
-                               'point_cloud_min_z': -0.1,
-                               }]
 
     # Node definition for laserMapping with Point-LIO
     laser_mapping_node = Node(
@@ -60,43 +52,35 @@ def generate_launch_description():
         name='rviz',
         arguments=['-d', PathJoinSubstitution([
             FindPackageShare('point_lio'),
-            'rviz_cfg', 'loam_livox.rviz'
+            'rviz_cfg', 'lio_odom.rviz'
         ])],
         condition=IfCondition(LaunchConfiguration('rviz')),
         # prefix='nice'
     )
 
-    tf_br_node = Node(package="tf2_ros",
-             executable="static_transform_publisher",
-             name="odom_tf_broadcaster",
-             arguments=['0.0', '0.0', '0.3', '0.0', '0.0', '0.0', 'base_footprint', 'base_link'],)
+    # tf_br_node = Node(package="tf2_ros",
+    #          executable="static_transform_publisher",
+    #          name="odom_tf_broadcaster",
+    #          arguments=['0.0', '0.0', '0.3', '0.0', '0.0', '0.0', 'base_footprint', 'base_link'],)
 
-    tf_lidar_to_base = Node(package="tf2_ros",
-             executable="static_transform_publisher",
-             name="lidar_tf_broadcaster",
-             arguments=['0.28945', '0', '-0.046825', '0', '2.8782', '0', 'base_link', 'utlidar_lidar'],)
+    # tf_lidar_to_base = Node(package="tf2_ros",
+    #          executable="static_transform_publisher",
+    #          name="lidar_tf_broadcaster",
+    #          arguments=['0.28945', '0', '-0.046825', '0', '2.8782', '0', 'base_link', 'utlidar_lidar'],)
 
-    tf_imu_to_base = Node(package="tf2_ros",
-             executable="static_transform_publisher",
-             name="imu_tf_broadcaster",
-             arguments=['-0.02557', '0', '0.04232', '0', '0', '0', 'base_link', 'utlidar_imu'],)
+    # tf_imu_to_base = Node(package="tf2_ros",
+    #          executable="static_transform_publisher",
+    #          name="imu_tf_broadcaster",
+    #          arguments=['-0.02557', '0', '0.04232', '0', '0', '0', 'base_link', 'utlidar_imu'],)
 
-    octomap_node = Node(
-        package='octomap_server',
-        executable='octomap_server_node',
-        name='octomap_server',
-        parameters=octomap_mapping_params,
-        remappings=[("cloud_in", "/cloud_registered")],
-    )
 
     # Assemble the launch description
     ld = LaunchDescription([
         rviz_arg,
         laser_mapping_node,
-        tf_br_node,
-        tf_lidar_to_base,
-        tf_imu_to_base,
-        octomap_node,
+        # tf_br_node,
+        # tf_lidar_to_base,
+        # tf_imu_to_base,
         GroupAction(
             actions=[rviz_node],
             condition=IfCondition(LaunchConfiguration('rviz'))
