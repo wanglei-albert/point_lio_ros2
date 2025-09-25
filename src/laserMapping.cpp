@@ -348,7 +348,7 @@ void imu_cbk(const sensor_msgs::msg::Imu::SharedPtr msg_in) {
     mtx_buffer.lock();
 
     if (timestamp < last_timestamp_imu) {
-        RCLCPP_ERROR(logger, "imu loop back, clear deque");
+        RCLCPP_ERROR(logger, "imu loop back, clear deque, cur_T: %f, last_t: %f", timestamp, last_timestamp_imu);
         // imu_deque.shrink_to_fit();
         mtx_buffer.unlock();
         sig_buffer.notify_all();
